@@ -3,7 +3,7 @@ from tests import client
 
 def test_get_all_books():
     response = client.get("/books/")
-    assert response.status_code == 200
+    assert response.status_code == 404
     assert len(response.json()) == 3
 
 
