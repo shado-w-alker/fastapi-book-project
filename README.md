@@ -79,6 +79,64 @@ uvicorn main:app
 - Swagger UI: http://localhost:8000/docs
 - ReDoc: http://localhost:8000/redoc
 
+## Deployment on Render
+
+### 1. Create a Render Account
+
+- Go to [Render](https://render.com/) and sign in.
+
+### 2. Deploy the Application
+
+1. Navigate to the **Render Dashboard**.
+2. Click **New Web Service** and connect the repository.
+3. Set the **Build & Start Command**:
+   ```bash
+   pip install -r requirements.txt && uvicorn main:app --host 0.0.0.0 --port $PORT
+   ```
+4. Ensure **Auto-Deploy** is enabled (so it redeploys on each push to `main`).
+5. Click **Create Web Service** and wait for deployment to complete.
+
+### 3. Access the Deployed API
+
+- Your API will be available at: `https://your-app-name.onrender.com`
+- **Swagger UI**: `https://your-app-name.onrender.com/docs`
+
+---
+
+## Continuous Integration (CI) Setup
+
+To ensure code quality and prevent merging broken changes, a **GitHub Actions CI workflow** runs tests on each pull request.
+
+### **CI Documentation Workflow (`.github/workflows/test.yml`)**
+
+### **How It Works**
+
+- Runs automatically **on every pull request** to `main`.
+- **Installs dependencies** and **runs tests using `pytest`**.
+- Prevents merging if tests fail.
+
+---
+
+## Continuous Deployment (CD) Setup
+
+### GitHub Actions Workflow
+
+To enable automatic deployment on merge to `main`:
+
+1. Navigate to **Settings → Secrets and Variables → Actions** in your GitHub repository.
+2. Add a **New Repository Secret**:
+   - **Name**: `RENDER_DEPLOY_HOOK`
+   - **Value**: Your **Render Deploy Hook URL** (found in Render settings).
+3. Create a GitHub Actions workflow file (`.github/workflows/deploy.yml`):
+
+### **CD Documentation Workflow (`.github/workflows/deploy.yml`)**
+
+This ensures that every time you **merge a PR into `main`**, Render will automatically redeploy the latest version of the API.
+
+---
+
+---
+
 ## API Endpoints
 
 ### Books
