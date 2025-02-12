@@ -71,7 +71,7 @@ pip install -r requirements.txt
 1. Start the server:
 
 ```bash
-uvicorn main:app
+uvicorn main:app --host 0.0.0.0 --port 8000
 ```
 
 2. Access the API documentation:
@@ -79,33 +79,86 @@ uvicorn main:app
 - Swagger UI: http://localhost:8000/docs
 - ReDoc: http://localhost:8000/redoc
 
-## Deployment on Render
+## Deployment
 
-### 1. Create a Render Account
+### 1. Set Up Nginx
 
-- Go to [Render](https://render.com/) and sign in.
+1. Install Nginx:
 
-### 2. Deploy the Application
-
-1. Navigate to the **Render Dashboard**.
-2. Click **New Web Service** and connect the repository.
-3. Set the **Build & Start Command**:
    ```bash
-   pip install -r requirements.txt && uvicorn main:app --host 0.0.0.0 --port $PORT
+   sudo apt update
+   sudo apt install nginx
    ```
-4. Ensure **Auto-Deploy** is enabled (so it redeploys on each push to `main`).
-5. Click **Create Web Service** and wait for deployment to complete.
 
-### 3. Access the Deployed API
+2. Configure Nginx:
 
-- Your API will be available at: `https://your-app-name.onrender.com`
-- **Swagger UI**: `https://your-app-name.onrender.com/docs`
+   ```bash
+   sudo nano /etc/nginx/sites-available/fastapi
+   ```
+
+   Add:
+
+   ```nginx
+   server {
+       listen 80;
+       server_name your-server-ip;
+
+       location /api/v1 {
+           proxy_pass http://127.0.0.1:8000;
+           proxy_set_header Host $host;
+           proxy_set_header X-Real-IP $remote_addr;
+           proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+           proxy_set_header X-Forwarded-Proto $scheme;
+       }
+   }
+   ```
+
+3. Enable and reload Nginx:
+   ```bash
+   sudo ln -s /etc/nginx/sites-available/fastapi /etc/nginx/sites-enabled/
+   sudo nginx -t
+   sudo systemctl reload nginx
+   ```
+
+### 2. Set Up `systemd` Service
+
+1. Create a service file:
+
+   ```bash
+   sudo nano /etc/systemd/system/fastapi.service
+   ```
+
+   Add:
+
+   ```ini
+   [Unit]
+   Description=FastAPI Application
+   After=network.target
+
+   [Service]
+   User=your-username #like ubuntu etc depending on the one used
+   WorkingDirectory=/path/to/fastapi-book-project #on the terminal fastapi-book-project dierectory run pwd
+   ExecStart=/path/to/venv/bin/uvicorn main:app --host 0.0.0.0 --port 8000
+   Restart=always
+
+   [Install]
+   WantedBy=multi-user.target
+   ```
+
+2. Enable and start the service:
+   ```bash
+   sudo systemctl enable fastapi
+   sudo systemctl start fastapi
+   ```
 
 ---
 
 ## Continuous Integration (CI) Setup
 
-To ensure code quality and prevent merging broken changes, a **GitHub Actions CI workflow** runs tests on each pull request.
+Runs on pull requests to `main`:
+
+1. Installs dependencies.
+2. Runs tests.
 
 ### **CI Documentation Workflow (`.github/workflows/test.yml`)**
 
@@ -121,17 +174,13 @@ To ensure code quality and prevent merging broken changes, a **GitHub Actions CI
 
 ### GitHub Actions Workflow
 
-To enable automatic deployment on merge to `main`:
+Runs on pushes to `main`:
 
-1. Navigate to **Settings → Secrets and Variables → Actions** in your GitHub repository.
-2. Add a **New Repository Secret**:
-   - **Name**: `RENDER_DEPLOY_HOOK`
-   - **Value**: Your **Render Deploy Hook URL** (found in Render settings).
-3. Create a GitHub Actions workflow file (`.github/workflows/deploy.yml`):
+1. Connects to the server via SSH.
+2. Pulls the latest code.
+3. Restarts the FastAPI service.
 
 ### **CD Documentation Workflow (`.github/workflows/deploy.yml`)**
-
-This ensures that every time you **merge a PR into `main`**, Render will automatically redeploy the latest version of the API.
 
 ---
 
