@@ -2,18 +2,20 @@ name: Deploy API
 
 on:
   push:
-    branches:
-      - main
-
+    branches: [main]
 jobs:
   deploy:
-    name: Deploy to Render
     runs-on: ubuntu-latest
-
     steps:
-      - name: Notify Render to Deploy
-        run: |
-          curl -X POST "$RENDER_DEPLOY_HOOK"
-
-    env:
-      RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
+      - name: Deploy to server
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            cd fastapi-book-project
+            git pull origin main
+            source venv/bin/activate
+            pip install -r requirements.txt
+            sudo systemctl restart fastapi
